@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
+
+// ═══════════════════════════════════════════════════
+// THEMES
+// ═══════════════════════════════════════════════════
 
 const THEMES = {
   light: {
@@ -27,7 +31,7 @@ const THEMES = {
     accent: "#F0C246", accentDim: "rgba(240,194,70,0.12)", accentText: "#F0C246",
     secondary: "#3DD9A0", secondaryDim: "rgba(61,217,160,0.10)",
     tertiary: "#FF7A5C", tertiaryDim: "rgba(255,122,92,0.10)",
-    text: "#ECE9E1", textSec: "#9A978E", textMut: "#5E5C56",
+    text: "#ECE9E1", textSec: "#9A978E", textMut: "#8A8780",
     border: "rgba(255,255,255,0.06)", borderCard: "rgba(255,255,255,0.05)",
     shadow: "0 1px 3px rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.15)",
     shadowHover: "0 4px 12px rgba(0,0,0,0.25), 0 12px 40px rgba(0,0,0,0.2)",
@@ -42,6 +46,10 @@ const THEMES = {
     dots: "radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px)",
   },
 };
+
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
 
 const M = { DASH: "d", VOCAB: "v", VERBS: "vb", CONV: "c", WRITE: "w", INT: "i" };
 
@@ -169,8 +177,166 @@ const expressions = [
   { exp: "The ball is in their court", mean: "Their turn to act", ctx: "Follow-ups", ex: "We sent the proposal. The ball is in their court now." },
 ];
 
+// ═══════════════════════════════════════════════════
+// DESIGN SYSTEM COMPONENTS (extracted outside App for performance)
+// ═══════════════════════════════════════════════════
+
+const getCol = (th, c) => ({
+  accent: { bg: th.accentDim, fg: th.accentText },
+  secondary: { bg: th.secondaryDim, fg: th.secondary },
+  tertiary: { bg: th.tertiaryDim, fg: th.tertiary },
+  info: { bg: th.infoDim, fg: th.info },
+  success: { bg: th.successDim, fg: th.success },
+  error: { bg: th.errorDim, fg: th.error },
+  warning: { bg: th.warningDim, fg: th.warning },
+}[c] || { bg: th.accentDim, fg: th.accentText });
+
+const getInpStyle = (th) => ({
+  background: th.bgInput,
+  border: `1.5px solid ${th.border}`,
+  borderRadius: 14,
+  padding: "14px 18px",
+  color: th.text,
+  fontSize: 15,
+  fontFamily: "'Plus Jakarta Sans',sans-serif",
+  outline: "none",
+  transition: "border-color 0.3s ease",
+});
+
+const Card = memo(({ children, s = {}, onClick, th }) => (
+  <div
+    className="card-hover"
+    data-clickable={onClick ? "true" : "false"}
+    onClick={onClick}
+    style={{
+      background: th.bgCard,
+      borderRadius: 22,
+      padding: 28,
+      border: `1px solid ${th.borderCard}`,
+      boxShadow: th.shadow,
+      cursor: onClick ? "pointer" : "default",
+      backgroundImage: th.gradCard,
+      ...s,
+    }}
+  >
+    {children}
+  </div>
+));
+Card.displayName = "Card";
+
+const Btn = memo(({ label, onClick, v = "primary", dis = false, icon, sz = "md", th }) => {
+  const dk = th.name === "dark";
+  const vs = {
+    primary: { bg: th.gradAccent, c: dk ? "#0E1117" : "#1A1A18", bd: "none" },
+    secondary: { bg: th.secondaryDim, c: th.secondary, bd: `1px solid ${th.secondary}22` },
+    ghost: { bg: "transparent", c: th.textSec, bd: `1px solid ${th.border}` },
+    success: { bg: th.success, c: "#fff", bd: "none" },
+    warning: { bg: th.warning, c: "#1A1A18", bd: "none" },
+    danger: { bg: th.errorDim, c: th.error, bd: `1px solid ${th.error}22` },
+  };
+  const vv = vs[v] || vs.primary;
+  const ss = { sm: { px: 14, py: 7, fs: 12 }, md: { px: 22, py: 11, fs: 13 }, lg: { px: 28, py: 14, fs: 15 } }[sz];
+  return (
+    <button
+      className="btn"
+      onClick={onClick}
+      disabled={dis}
+      style={{
+        background: dis ? th.bgAlt : vv.bg,
+        color: dis ? th.textMut : vv.c,
+        border: dis ? `1px solid ${th.border}` : vv.bd,
+        borderRadius: 14,
+        padding: `${ss.py}px ${ss.px}px`,
+        fontSize: ss.fs,
+        fontWeight: 650,
+        cursor: dis ? "not-allowed" : "pointer",
+        fontFamily: "'Plus Jakarta Sans',sans-serif",
+        letterSpacing: "-0.01em",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {icon && <span style={{ fontSize: ss.fs + 1 }}>{icon}</span>}
+      {label}
+    </button>
+  );
+});
+Btn.displayName = "Btn";
+
+const Badge = memo(({ text, c = "accent", sz = "sm", th }) => {
+  const cc = getCol(th, c);
+  return (
+    <span style={{
+      background: cc.bg,
+      color: cc.fg,
+      padding: sz === "sm" ? "4px 12px" : "6px 16px",
+      borderRadius: 20,
+      fontSize: sz === "sm" ? 11 : 13,
+      fontWeight: 650,
+      fontFamily: "'Plus Jakarta Sans',sans-serif",
+    }}>
+      {text}
+    </span>
+  );
+});
+Badge.displayName = "Badge";
+
+const Pill = memo(({ label, active, onClick, col, th }) => {
+  const dk = th.name === "dark";
+  const c = col === "accent" ? th.accent : col === "secondary" ? th.secondary : col === "tertiary" ? th.tertiary : th.info;
+  return (
+    <button
+      className="pill-btn"
+      onClick={onClick}
+      style={{
+        background: active ? c : th.bgAlt,
+        color: active ? (dk ? "#0E1117" : "#fff") : th.textSec,
+        border: `1.5px solid ${active ? c : th.border}`,
+        borderRadius: 14,
+        padding: "9px 18px",
+        fontSize: 13,
+        fontWeight: 600,
+        cursor: "pointer",
+        fontFamily: "'Plus Jakarta Sans',sans-serif",
+      }}
+    >
+      {label}
+    </button>
+  );
+});
+Pill.displayName = "Pill";
+
+const PBar = memo(({ val, max, c, th }) => {
+  const pct = max > 0 ? Math.min((val / max) * 100, 100) : 0;
+  const color = c || th.accent;
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={val}
+      aria-valuemax={max}
+      aria-label={`Progress: ${Math.round(pct)}%`}
+      style={{ height: 5, borderRadius: 3, background: th.bgAlt, overflow: "hidden", width: 80 }}
+    >
+      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.5s ease" }} />
+    </div>
+  );
+});
+PBar.displayName = "PBar";
+
+// ═══════════════════════════════════════════════════
+// APP COMPONENT
+// ═══════════════════════════════════════════════════
+
 export default function App() {
-  const [dk, setDk] = useState(false);
+  const [dk, setDk] = useState(() => {
+    try {
+      const saved = localStorage.getItem("emh-theme");
+      if (saved) return saved === "dark";
+    } catch { /* localStorage unavailable */ }
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
   const [mod, setMod] = useState(M.DASH);
   const [vsi, setVsi] = useState(0);
   const [vci, setVci] = useState(0);
@@ -198,19 +364,31 @@ export default function App() {
   const chatEnd = useRef(null);
 
   const th = dk ? THEMES.dark : THEMES.light;
+  const InpStyle = getInpStyle(th);
 
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
   useEffect(() => { setAnim(a => a + 1); }, [mod]);
 
+  // ═══ API (fixed: added missing headers) ═══
   const api = useCallback(async (sys, messages) => {
     try {
       const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: sys, messages }),
       });
       const d = await r.json();
+      if (!r.ok) return `⚠️ API Error: ${d.error?.message || `Status ${r.status}`}`;
       return d.content?.map(b => b.text || "").join("\n") || "No response.";
-    } catch { return "Connection error. Please try again."; }
+    } catch (err) {
+      console.error("API call failed:", err);
+      return "⚠️ Connection error. Check your API key and try again.";
+    }
   }, []);
 
   const sendChat = useCallback(async () => {
@@ -233,7 +411,9 @@ export default function App() {
   const startConv = useCallback((i) => { setSi(i); setMsgs([{ role: "assistant", content: convScenarios[i].start }]); setMod(M.CONV); }, []);
 
   const checkV = useCallback(() => {
-    const ex = verbExercises[bsi].exercises[bi];
+    const set = verbExercises[bsi];
+    if (!set || !set.exercises[bi]) return;
+    const ex = set.exercises[bi];
     const ok = bAns.trim().toLowerCase() === ex.answer.toLowerCase();
     setBFb({ ok, ans: ex.answer, tip: ex.tip });
     setBScore(p => ({ c: p.c + (ok ? 1 : 0), t: p.t + 1 }));
@@ -242,51 +422,29 @@ export default function App() {
 
   const nextV = useCallback(() => {
     const s = verbExercises[bsi];
+    if (!s) return;
     if (bi < s.exercises.length - 1) setBi(i => i + 1);
     else if (bsi < verbExercises.length - 1) { setBsi(i => i + 1); setBi(0); }
     else { setBsi(0); setBi(0); }
     setBAns(""); setBFb(null);
   }, [bi, bsi]);
 
-  // ═══ DESIGN SYSTEM COMPONENTS ═══
-
-  const getCol = (c) => ({ accent: { bg: th.accentDim, fg: th.accentText }, secondary: { bg: th.secondaryDim, fg: th.secondary }, tertiary: { bg: th.tertiaryDim, fg: th.tertiary }, info: { bg: th.infoDim, fg: th.info }, success: { bg: th.successDim, fg: th.success }, error: { bg: th.errorDim, fg: th.error }, warning: { bg: th.warningDim, fg: th.warning } }[c] || { bg: th.accentDim, fg: th.accentText });
-
-  const Card = ({ children, s = {}, onClick }) => (
-    <div onClick={onClick} style={{ background: th.bgCard, borderRadius: 22, padding: 28, border: `1px solid ${th.borderCard}`, boxShadow: th.shadow, transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)", cursor: onClick ? "pointer" : "default", backgroundImage: th.gradCard, ...s }}
-      onMouseEnter={e => { if (onClick) { e.currentTarget.style.boxShadow = th.shadowHover; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = th.accent + "33"; }}}
-      onMouseLeave={e => { if (onClick) { e.currentTarget.style.boxShadow = th.shadow; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = th.borderCard; }}}
-    >{children}</div>
-  );
-
-  const Btn = ({ label, onClick, v = "primary", dis = false, icon, sz = "md" }) => {
-    const vs = { primary: { bg: th.gradAccent, c: dk ? "#0E1117" : "#1A1A18", bd: "none" }, secondary: { bg: th.secondaryDim, c: th.secondary, bd: `1px solid ${th.secondary}22` }, ghost: { bg: "transparent", c: th.textSec, bd: `1px solid ${th.border}` }, success: { bg: th.success, c: "#fff", bd: "none" }, warning: { bg: th.warning, c: "#1A1A18", bd: "none" }, danger: { bg: th.errorDim, c: th.error, bd: `1px solid ${th.error}22` } };
-    const vv = vs[v] || vs.primary;
-    const ss = { sm: { px: 14, py: 7, fs: 12 }, md: { px: 22, py: 11, fs: 13 }, lg: { px: 28, py: 14, fs: 15 } }[sz];
-    return <button onClick={onClick} disabled={dis} style={{ background: dis ? th.bgAlt : vv.bg, color: dis ? th.textMut : vv.c, border: dis ? `1px solid ${th.border}` : vv.bd, borderRadius: 14, padding: `${ss.py}px ${ss.px}px`, fontSize: ss.fs, fontWeight: 650, cursor: dis ? "not-allowed" : "pointer", transition: "all 0.25s", fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.01em", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>{icon && <span style={{ fontSize: ss.fs + 1 }}>{icon}</span>}{label}</button>;
-  };
-
-  const Badge = ({ text, c = "accent", sz = "sm" }) => { const cc = getCol(c); return <span style={{ background: cc.bg, color: cc.fg, padding: sz === "sm" ? "4px 12px" : "6px 16px", borderRadius: 20, fontSize: sz === "sm" ? 11 : 13, fontWeight: 650, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{text}</span>; };
-
-  const Pill = ({ label, active, onClick, col }) => {
-    const c = col === "accent" ? th.accent : col === "secondary" ? th.secondary : col === "tertiary" ? th.tertiary : th.info;
-    return <button onClick={onClick} style={{ background: active ? c : th.bgAlt, color: active ? (dk ? "#0E1117" : "#fff") : th.textSec, border: `1.5px solid ${active ? c : th.border}`, borderRadius: 14, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.25s", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{label}</button>;
-  };
-
-  const PBar = ({ val, max, c = th.accent }) => <div style={{ height: 5, borderRadius: 3, background: th.bgAlt, overflow: "hidden", width: 80 }}><div style={{ height: "100%", width: `${Math.min((val / max) * 100, 100)}%`, background: c, borderRadius: 3, transition: "width 0.5s ease" }} /></div>;
-
-  const InpStyle = { background: th.bgInput, border: `1.5px solid ${th.border}`, borderRadius: 14, padding: "14px 18px", color: th.text, fontSize: 15, fontFamily: "'Plus Jakarta Sans',sans-serif", outline: "none", transition: "border 0.3s" };
+  const toggleTheme = useCallback(() => {
+    const next = !dk;
+    setDk(next);
+    try { localStorage.setItem("emh-theme", next ? "dark" : "light"); } catch { /* ignore */ }
+  }, [dk]);
 
   // ═══ DASHBOARD ═══
   const renderDash = () => (
     <div style={{ maxWidth: 960, margin: "0 auto" }}>
-      <div style={{ background: th.gradHero, borderRadius: 28, padding: "48px 44px", marginBottom: 28, border: `1px solid ${th.borderCard}`, position: "relative", overflow: "hidden", backgroundImage: `${th.gradHero}, ${th.dots}`, backgroundSize: "100% 100%, 20px 20px" }}>
+      <div className="hero" style={{ background: th.gradHero, borderRadius: 28, padding: "48px 44px", marginBottom: 28, border: `1px solid ${th.borderCard}`, position: "relative", overflow: "hidden", backgroundImage: `${th.gradHero}, ${th.dots}`, backgroundSize: "100% 100%, 20px 20px" }}>
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", minHeight: 44 }}>
             <div>
               <p style={{ fontSize: 12, color: th.textMut, fontWeight: 600, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Yamazing Corp • Learning Platform</p>
               <h1 style={{ fontSize: 42, fontWeight: 800, color: th.text, lineHeight: 1.1, fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.03em", marginBottom: 12 }}>English Mastery<br/><span style={{ background: th.gradAccent, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Hub</span></h1>
-              <p style={{ fontSize: 15, color: th.textSec, maxWidth: 440, lineHeight: 1.6, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Your personalized path to professional fluency — built for Data Scientists, SaaS founders & global leaders.</p>
+              <p className="subtitle" style={{ fontSize: 15, color: th.textSec, maxWidth: 440, lineHeight: 1.6, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Your personalized path to professional fluency — built for Data Scientists, SaaS founders & global leaders.</p>
             </div>
             {streak > 2 && <div style={{ background: th.warningDim, borderRadius: 16, padding: "10px 20px", display: "flex", alignItems: "center", gap: 8, border: `1px solid ${th.warning}22` }}><span style={{ fontSize: 20 }}>🔥</span><span style={{ color: th.warning, fontWeight: 750, fontSize: 18, fontFamily: "'Outfit',sans-serif" }}>{streak}</span></div>}
           </div>
@@ -295,7 +453,7 @@ export default function App() {
         <div style={{ position: "absolute", right: 100, bottom: -80, width: 200, height: 200, borderRadius: "50%", background: `radial-gradient(circle, ${th.secondaryDim}, transparent 70%)`, opacity: 0.7 }} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: 16, marginBottom: 28 }}>
+      <div className="grid-cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: 16, marginBottom: 28 }}>
         {[
           { icon: "📚", title: "Vocabulary", desc: "32 terms across 4 domains", col: "secondary", m: M.VOCAB, ct: "32 terms" },
           { icon: "⚡", title: "Verb Mastery", desc: "Tenses & phrasal verbs", col: "accent", m: M.VERBS, ct: "16 exercises" },
@@ -303,12 +461,12 @@ export default function App() {
           { icon: "✍️", title: "Writing Lab", desc: "Write & get AI feedback", col: "warning", m: M.WRITE, ct: "4 prompts" },
           { icon: "🎯", title: "Interview Prep", desc: "Behavioral & technical Qs", col: "info", m: M.INT, ct: "12 questions" },
         ].map((it) => {
-          const cc = getCol(it.col);
+          const cc = getCol(th, it.col);
           return (
-            <Card key={it.title} onClick={() => { if (it.m === M.CONV) { setMod(M.CONV); setMsgs([]); } else setMod(it.m); }} s={{ padding: 24, position: "relative", overflow: "hidden" }}>
+            <Card key={it.title} th={th} onClick={() => { if (it.m === M.CONV && mod !== M.CONV) setMsgs([]); setMod(it.m); }} s={{ padding: 24, position: "relative", overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div style={{ width: 50, height: 50, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, background: cc.bg }}>{it.icon}</div>
-                <Badge text={it.ct} c={it.col} />
+                <Badge text={it.ct} c={it.col} th={th} />
               </div>
               <h3 style={{ fontSize: 18, fontWeight: 750, color: th.text, marginBottom: 6, fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.02em" }}>{it.title}</h3>
               <p style={{ fontSize: 13, color: th.textSec, lineHeight: 1.5, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{it.desc}</p>
@@ -317,17 +475,17 @@ export default function App() {
         })}
       </div>
 
-      <Card s={{ position: "relative", overflow: "hidden" }}>
+      <Card th={th} s={{ position: "relative", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 38, height: 38, borderRadius: 12, background: th.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>💡</div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: th.text, fontFamily: "'Outfit',sans-serif" }}>Daily Expression</h3>
           </div>
-          <Btn label="Next" onClick={() => setExpI(i => (i + 1) % expressions.length)} v="ghost" sz="sm" icon="→" />
+          <Btn label="Next" onClick={() => setExpI(i => (i + 1) % expressions.length)} v="ghost" sz="sm" icon="→" th={th} />
         </div>
         <h2 style={{ fontSize: 26, fontWeight: 800, color: th.text, marginBottom: 10, fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.02em" }}>"{expressions[expI].exp}"</h2>
         <p style={{ color: th.textSec, fontSize: 15, marginBottom: 14 }}>{expressions[expI].mean}</p>
-        <Badge text={expressions[expI].ctx} c="info" />
+        <Badge text={expressions[expI].ctx} c="info" th={th} />
         <div style={{ background: th.bgAlt, borderRadius: 16, padding: 18, borderLeft: `3px solid ${th.accent}`, marginTop: 14 }}>
           <p style={{ color: th.text, fontSize: 14, fontStyle: "italic", lineHeight: 1.6 }}>"{expressions[expI].ex}"</p>
         </div>
@@ -339,20 +497,18 @@ export default function App() {
   const renderVocab = () => {
     const s = vocabSets[vsi], c = s.words[vci];
     return (
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>{vocabSets.map((ss, i) => <Pill key={i} label={`${ss.icon} ${ss.cat}`} active={vsi === i} onClick={() => { setVsi(i); setVci(0); setShowDef(false); }} col={ss.col} />)}</div>
+      <div className="content-area" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>{vocabSets.map((ss, i) => <Pill key={i} label={`${ss.icon} ${ss.cat}`} active={vsi === i} onClick={() => { setVsi(i); setVci(0); setShowDef(false); }} col={ss.col} th={th} />)}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>{vci + 1} of {s.words.length}</span><PBar val={vci + 1} max={s.words.length} c={th.secondary} /></div>
-          <div style={{ display: "flex", gap: 8 }}><Badge text={`✓ ${vScore.k}`} c="success" /><Badge text={`📖 ${vScore.l}`} c="warning" /></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>{vci + 1} of {s.words.length}</span><PBar val={vci + 1} max={s.words.length} c={th.secondary} th={th} /></div>
+          <div style={{ display: "flex", gap: 8 }}><Badge text={`✓ ${vScore.k}`} c="success" th={th} /><Badge text={`📖 ${vScore.l}`} c="warning" th={th} /></div>
         </div>
-        <Card s={{ textAlign: "center", minHeight: 320, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <Card th={th} s={{ textAlign: "center", minHeight: 420, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
           <p style={{ fontSize: 11, color: th.textMut, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, marginBottom: 12 }}>{s.cat}</p>
           <h2 style={{ fontSize: 36, fontWeight: 800, color: th.text, marginBottom: 8, fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.02em" }}>{c.term}</h2>
           <p style={{ color: th.textMut, fontSize: 14, marginBottom: 30, fontFamily: "monospace" }}>{c.ph}</p>
           {!showDef ? (
-            <button onClick={() => setShowDef(true)} style={{ background: th.bgAlt, color: th.textSec, border: `1.5px dashed ${th.border}`, borderRadius: 16, padding: "18px 40px", fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "all 0.3s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = th.accent; e.currentTarget.style.color = th.accentText; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = th.border; e.currentTarget.style.color = th.textSec; }}>Tap to reveal</button>
+            <button className="reveal-btn" onClick={() => setShowDef(true)} style={{ background: th.bgAlt, color: th.textSec, border: `1.5px dashed ${th.border}`, borderRadius: 16, padding: "18px 40px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Tap to reveal</button>
           ) : (
             <div style={{ width: "100%", maxWidth: 520 }}>
               <p style={{ color: th.text, fontSize: 17, marginBottom: 22, lineHeight: 1.65 }}>{c.def}</p>
@@ -364,8 +520,8 @@ export default function App() {
           )}
         </Card>
         {showDef && <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 22 }}>
-          <Btn label="Still Learning" v="warning" icon="📖" onClick={() => { setVScore(p => ({ ...p, l: p.l + 1 })); setShowDef(false); setVci(i => (i + 1) % s.words.length); }} />
-          <Btn label="I Know This" v="success" icon="✓" onClick={() => { setVScore(p => ({ ...p, k: p.k + 1 })); setShowDef(false); setVci(i => (i + 1) % s.words.length); setStreak(x => x + 1); }} />
+          <Btn label="Still Learning" v="warning" icon="📖" th={th} onClick={() => { setVScore(p => ({ ...p, l: p.l + 1 })); setShowDef(false); setVci(i => (i + 1) % s.words.length); }} />
+          <Btn label="I Know This" v="success" icon="✓" th={th} onClick={() => { setVScore(p => ({ ...p, k: p.k + 1 })); setShowDef(false); setVci(i => (i + 1) % s.words.length); setStreak(x => x + 1); }} />
         </div>}
       </div>
     );
@@ -373,21 +529,31 @@ export default function App() {
 
   // ═══ VERBS ═══
   const renderVerbs = () => {
-    const s = verbExercises[bsi], ex = s.exercises[bi];
+    const s = verbExercises[bsi];
+    if (!s) return null;
+    const ex = s.exercises[bi];
+    if (!ex) return null;
     return (
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>{verbExercises.map((ss, i) => <Pill key={i} label={`${ss.icon} ${ss.level}`} active={bsi === i} onClick={() => { setBsi(i); setBi(0); setBAns(""); setBFb(null); }} col="accent" />)}</div>
+      <div className="content-area" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>{verbExercises.map((ss, i) => <Pill key={i} label={`${ss.icon} ${ss.level}`} active={bsi === i} onClick={() => { setBsi(i); setBi(0); setBAns(""); setBFb(null); }} col="accent" th={th} />)}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>{bi + 1} of {s.exercises.length}</span><PBar val={bi + 1} max={s.exercises.length} /></div>
-          <div style={{ display: "flex", gap: 8 }}><Badge text={`${bScore.c}/${bScore.t}`} c={bScore.t > 0 && bScore.c / bScore.t > 0.7 ? "success" : "warning"} />{streak > 0 && <Badge text={`🔥 ${streak}`} c="accent" />}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>{bi + 1} of {s.exercises.length}</span><PBar val={bi + 1} max={s.exercises.length} th={th} /></div>
+          <div style={{ display: "flex", gap: 8 }}><Badge text={`${bScore.c}/${bScore.t}`} c={bScore.t > 0 && bScore.c / bScore.t > 0.7 ? "success" : "warning"} th={th} />{streak > 0 && <Badge text={`🔥 ${streak}`} c="accent" th={th} />}</div>
         </div>
-        <Card>
-          <Badge text={ex.tense} c="info" sz="md" />
+        <Card th={th} s={{ minHeight: 180 }}>
+          <Badge text={ex.tense} c="info" sz="md" th={th} />
           <p style={{ fontSize: 19, color: th.text, lineHeight: 1.8, margin: "20px 0 24px", fontWeight: 500 }}>{ex.prompt}</p>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <input value={bAns} onChange={e => setBAns(e.target.value)} onKeyDown={e => e.key === "Enter" && !bFb && checkV()} placeholder="Type your answer..." style={{ ...InpStyle, flex: 1, borderColor: bFb ? (bFb.ok ? th.success : th.error) : th.border }}
-              onFocus={e => { if (!bFb) e.target.style.borderColor = th.accent; }} onBlur={e => { if (!bFb) e.target.style.borderColor = th.border; }} />
-            {!bFb ? <Btn label="Check" onClick={checkV} /> : <Btn label="Next →" onClick={nextV} />}
+            <input
+              className="input-focus"
+              value={bAns}
+              onChange={e => setBAns(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !bFb && checkV()}
+              placeholder="Type your answer..."
+              aria-label="Type your verb answer"
+              style={{ ...InpStyle, flex: 1, borderColor: bFb ? (bFb.ok ? th.success : th.error) : th.border }}
+            />
+            {!bFb ? <Btn label="Check" onClick={checkV} th={th} /> : <Btn label="Next →" onClick={nextV} th={th} />}
           </div>
           {bFb && <div style={{ marginTop: 18, padding: 18, borderRadius: 16, background: bFb.ok ? th.successDim : th.errorDim, borderLeft: `3px solid ${bFb.ok ? th.success : th.error}` }}>
             <p style={{ fontWeight: 700, color: bFb.ok ? th.success : th.error, marginBottom: 6, fontFamily: "'Outfit',sans-serif", fontSize: 15 }}>{bFb.ok ? "✓ Correct!" : `✗ Answer: "${bFb.ans}"`}</p>
@@ -401,12 +567,12 @@ export default function App() {
   // ═══ CONVERSATION ═══
   const renderConv = () => {
     if (!msgs.length) return (
-      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+      <div className="content-area" style={{ maxWidth: 820, margin: "0 auto" }}>
         <h2 style={{ fontSize: 28, fontWeight: 800, color: th.text, marginBottom: 8, fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.02em" }}>Conversation Practice</h2>
         <p style={{ color: th.textSec, fontSize: 15, marginBottom: 28 }}>Choose a scenario for AI-powered professional role-play</p>
         <div style={{ display: "grid", gap: 16 }}>
-          {convScenarios.map((s, i) => { const cc = getCol(s.col); return (
-            <Card key={i} onClick={() => startConv(i)} s={{ padding: 24 }}>
+          {convScenarios.map((s, i) => { const cc = getCol(th, s.col); return (
+            <Card key={i} onClick={() => startConv(i)} s={{ padding: 24 }} th={th}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
                 <div style={{ width: 52, height: 52, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: cc.bg }}>{s.icon}</div>
                 <div style={{ flex: 1 }}>
@@ -415,30 +581,38 @@ export default function App() {
                 </div>
                 <span style={{ color: th.textMut, fontSize: 22 }}>→</span>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{s.tips.map((tip, j) => <Badge key={j} text={tip} c={s.col} />)}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{s.tips.map((tip, j) => <Badge key={j} text={tip} c={s.col} th={th} />)}</div>
             </Card>
           );})}
         </div>
       </div>
     );
-    const sc = convScenarios[si]; const cc = getCol(sc.col);
+    const sc = convScenarios[si]; const cc = getCol(th, sc.col);
     return (
-      <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100vh - 130px)" }}>
+      <div className="content-area" style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100vh - 130px)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${th.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 42, height: 42, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, background: cc.bg }}>{sc.icon}</div>
             <div><h3 style={{ fontSize: 16, fontWeight: 700, color: th.text, fontFamily: "'Outfit',sans-serif" }}>{sc.title}</h3><p style={{ color: th.textMut, fontSize: 12 }}>{sc.ctx}</p></div>
           </div>
-          <Btn label="End" onClick={() => setMsgs([])} v="danger" sz="sm" />
+          <Btn label="End" onClick={() => setMsgs([])} v="danger" sz="sm" th={th} />
         </div>
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14, paddingRight: 6 }}>
-          {msgs.map((m, i) => <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "78%", background: m.role === "user" ? th.chatU : th.chatB, color: m.role === "user" ? th.chatUT : th.chatBT, borderRadius: m.role === "user" ? "20px 20px 6px 20px" : "20px 20px 20px 6px", padding: "14px 20px", fontSize: 14, lineHeight: 1.65, border: m.role === "user" ? "none" : `1px solid ${th.border}`, whiteSpace: "pre-wrap", boxShadow: m.role === "user" ? "none" : th.shadow }}>{m.content}</div>)}
-          {cLoad && <div style={{ alignSelf: "flex-start", padding: "14px 20px", background: th.chatB, borderRadius: 20, border: `1px solid ${th.border}` }}><div style={{ display: "flex", gap: 6 }}>{[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: th.textMut, animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />)}</div></div>}
+        <div role="log" aria-live="polite" aria-label="Conversation messages" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14, paddingRight: 6 }}>
+          {msgs.map((m, i) => <div key={i} className="chat-bubble" style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "78%", background: m.role === "user" ? th.chatU : th.chatB, color: m.role === "user" ? th.chatUT : th.chatBT, borderRadius: m.role === "user" ? "20px 20px 6px 20px" : "20px 20px 20px 6px", padding: "14px 20px", fontSize: 14, lineHeight: 1.65, border: m.role === "user" ? "none" : `1px solid ${th.border}`, whiteSpace: "pre-wrap", boxShadow: m.role === "user" ? "none" : th.shadow }}>{m.content}</div>)}
+          {cLoad && <div role="status" aria-label="AI is typing" style={{ alignSelf: "flex-start", padding: "14px 20px", background: th.chatB, borderRadius: 20, border: `1px solid ${th.border}`, minHeight: 48 }}><div style={{ display: "flex", gap: 6 }}>{[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: th.textMut, animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />)}</div></div>}
           <div ref={chatEnd} />
         </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${th.border}` }}>
-          <input value={cin} onChange={e => setCin(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} placeholder="Type your response in English..." style={{ ...InpStyle, flex: 1, borderRadius: 16, padding: "14px 20px" }} onFocus={e => e.target.style.borderColor = th.accent} onBlur={e => e.target.style.borderColor = th.border} />
-          <Btn label="Send" onClick={sendChat} dis={cLoad} icon="↑" />
+        <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${th.border}`, background: th.bgGlass, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderRadius: "0 0 16px 16px", padding: "16px 0 0" }}>
+          <input
+            className="input-focus"
+            value={cin}
+            onChange={e => setCin(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendChat()}
+            placeholder="Type your response in English..."
+            aria-label="Type your response in English"
+            style={{ ...InpStyle, flex: 1, borderRadius: 16, padding: "14px 20px" }}
+          />
+          <Btn label="Send" onClick={sendChat} dis={cLoad} icon="↑" th={th} />
         </div>
       </div>
     );
@@ -448,22 +622,30 @@ export default function App() {
   const renderWrite = () => {
     const wp = writingPrompts[wi];
     return (
-      <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>{writingPrompts.map((p, i) => <Pill key={i} label={`${p.icon} ${p.title}`} active={wi === i} onClick={() => { setWi(i); setWTxt(""); setWFb(null); }} col="accent" />)}</div>
-        <Card>
+      <div className="content-area" style={{ maxWidth: 760, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>{writingPrompts.map((p, i) => <Pill key={i} label={`${p.icon} ${p.title}`} active={wi === i} onClick={() => { setWi(i); setWTxt(""); setWFb(null); }} col="accent" th={th} />)}</div>
+        <Card th={th}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{ width: 42, height: 42, borderRadius: 14, background: th.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{wp.icon}</div>
             <h3 style={{ fontSize: 19, fontWeight: 750, color: th.text, fontFamily: "'Outfit',sans-serif" }}>{wp.title}</h3>
           </div>
           <p style={{ color: th.textSec, fontSize: 14, marginBottom: 18, lineHeight: 1.65 }}>{wp.prompt}</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{wp.criteria.map((c, i) => <Badge key={i} text={c} c="accent" />)}</div>
-          <textarea value={wTxt} onChange={e => setWTxt(e.target.value)} placeholder="Write your response here..." rows={8} style={{ ...InpStyle, width: "100%", borderRadius: 16, padding: 18, resize: "vertical", lineHeight: 1.7, boxSizing: "border-box" }} onFocus={e => e.target.style.borderColor = th.accent} onBlur={e => e.target.style.borderColor = th.border} />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>{wp.criteria.map((c, i) => <Badge key={i} text={c} c="accent" th={th} />)}</div>
+          <textarea
+            className="input-focus"
+            value={wTxt}
+            onChange={e => setWTxt(e.target.value)}
+            placeholder="Write your response here..."
+            aria-label="Write your response"
+            rows={8}
+            style={{ ...InpStyle, width: "100%", borderRadius: 16, padding: 18, resize: "vertical", lineHeight: 1.7, boxSizing: "border-box" }}
+          />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
             <span style={{ color: th.textMut, fontSize: 13 }}>{wTxt.split(/\s+/).filter(Boolean).length} words</span>
-            <Btn label={wLoad ? "Analyzing..." : "Get AI Feedback"} onClick={getWFb} dis={wLoad || !wTxt.trim()} icon="✦" />
+            <Btn label={wLoad ? "Analyzing..." : "Get AI Feedback"} onClick={getWFb} dis={wLoad || !wTxt.trim()} icon="✦" th={th} />
           </div>
         </Card>
-        {wFb && <Card s={{ marginTop: 22, borderLeft: `3px solid ${th.success}` }}>
+        {wFb && <Card th={th} s={{ marginTop: 22, borderLeft: `3px solid ${th.success}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
             <div style={{ width: 36, height: 36, borderRadius: 12, background: th.successDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📝</div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: th.success, fontFamily: "'Outfit',sans-serif" }}>AI Feedback</h3>
@@ -478,28 +660,28 @@ export default function App() {
   const renderInt = () => {
     const cat = intQuestions[iCat], q = cat.qs[iQ];
     return (
-      <div style={{ maxWidth: 760, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>{intQuestions.map((c, i) => <Pill key={i} label={`${c.icon} ${c.cat}`} active={iCat === i} onClick={() => { setICat(i); setIQ(0); setShowTip(false); }} col="tertiary" />)}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>Question {iQ + 1} of {cat.qs.length}</span><PBar val={iQ + 1} max={cat.qs.length} c={th.tertiary} /></div>
+      <div className="content-area" style={{ maxWidth: 760, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>{intQuestions.map((c, i) => <Pill key={i} label={`${c.icon} ${c.cat}`} active={iCat === i} onClick={() => { setICat(i); setIQ(0); setShowTip(false); }} col="tertiary" th={th} />)}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}><span style={{ color: th.textMut, fontSize: 13, fontWeight: 500 }}>Question {iQ + 1} of {cat.qs.length}</span><PBar val={iQ + 1} max={cat.qs.length} c={th.tertiary} th={th} /></div>
 
-        <Card s={{ textAlign: "center", padding: 44 }}>
+        <Card th={th} s={{ textAlign: "center", padding: 44 }}>
           <div style={{ width: 68, height: 68, borderRadius: 20, background: th.tertiaryDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, margin: "0 auto 28px" }}>{cat.icon}</div>
           <h2 style={{ fontSize: 22, fontWeight: 750, color: th.text, lineHeight: 1.5, marginBottom: 28, fontFamily: "'Outfit',sans-serif", maxWidth: 560, margin: "0 auto 28px" }}>"{q.q}"</h2>
-          {!showTip ? <Btn label="Show coaching tip" onClick={() => setShowTip(true)} v="secondary" icon="💡" />
+          {!showTip ? <Btn label="Show coaching tip" onClick={() => setShowTip(true)} v="secondary" icon="💡" th={th} />
             : <div style={{ background: th.successDim, borderRadius: 18, padding: 20, borderLeft: `3px solid ${th.success}`, textAlign: "left", maxWidth: 520, margin: "0 auto" }}>
                 <p style={{ color: th.textMut, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Coaching Tip</p>
                 <p style={{ color: th.text, fontSize: 14, lineHeight: 1.65 }}>{q.tip}</p>
               </div>}
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28 }}>
-            <Btn label="← Previous" onClick={() => { setIQ(i => Math.max(0, i - 1)); setShowTip(false); }} v="ghost" />
-            <Btn label="Next →" onClick={() => { setIQ(i => (i + 1) % cat.qs.length); setShowTip(false); }} />
+            <Btn label="← Previous" onClick={() => { setIQ(i => Math.max(0, i - 1)); setShowTip(false); }} v="ghost" th={th} />
+            <Btn label="Next →" onClick={() => { setIQ(i => (i + 1) % cat.qs.length); setShowTip(false); }} th={th} />
           </div>
           <p style={{ color: th.textMut, fontSize: 12, marginTop: 24, fontStyle: "italic" }}>Practice answering out loud before reading the tip!</p>
         </Card>
 
-        <Card s={{ marginTop: 22 }}>
+        <Card th={th} s={{ marginTop: 22 }}>
           <h4 style={{ fontSize: 14, fontWeight: 700, color: th.accentText, marginBottom: 14, fontFamily: "'Outfit',sans-serif" }}>🗣️ Power Phrases</h4>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="phrases-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {["I spearheaded the initiative to...", "The key takeaway was...", "I collaborated with cross-functional teams...", "That challenge taught me...", "I proactively identified the opportunity...", "The measurable impact was X%..."].map((p, i) =>
               <div key={i} style={{ background: th.accentDim, borderRadius: 12, padding: "10px 14px", fontSize: 12, color: th.accentText, fontWeight: 500, lineHeight: 1.5 }}>{p}</div>
             )}
@@ -516,29 +698,54 @@ export default function App() {
     { k: M.CONV, l: "Speak", i: "◉" }, { k: M.WRITE, l: "Write", i: "✦" }, { k: M.INT, l: "Interview", i: "◎" },
   ];
 
-  return (
-    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'Plus Jakarta Sans',sans-serif", transition: "background 0.4s, color 0.4s" }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
-      <style>{`
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
-        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${th.border};border-radius:3px}
-        *{margin:0;padding:0;box-sizing:border-box}
-        input::placeholder,textarea::placeholder{color:${th.textMut}}
-      `}</style>
+  const cssVars = {
+    "--bg": th.bg, "--bg-alt": th.bgAlt, "--bg-card": th.bgCard,
+    "--accent": th.accent, "--accent-dim": th.accentDim, "--accent-text": th.accentText,
+    "--accent-33": th.accent + "33",
+    "--text": th.text, "--text-sec": th.textSec, "--text-muted": th.textMut,
+    "--border": th.border, "--border-card": th.borderCard,
+    "--shadow": th.shadow, "--shadow-hover": th.shadowHover,
+    "--scrollbar-color": th.border,
+  };
 
+  return (
+    <div style={{ minHeight: "100vh", background: th.bg, color: th.text, fontFamily: "'Plus Jakarta Sans',sans-serif", transition: "background 0.4s, color 0.4s", ...cssVars }}>
       <nav style={{ background: th.bgNav, backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", borderBottom: `1px solid ${th.border}`, padding: "0 20px", position: "sticky", top: 0, zIndex: 100, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+        <div className="nav-container" style={{ display: "flex", gap: 2, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           {nav.map(n => (
-            <button key={n.k} onClick={() => { setMod(n.k); if (n.k === M.CONV) setMsgs([]); }}
-              style={{ background: "transparent", border: "none", borderBottom: mod === n.k ? `2.5px solid ${th.accent}` : "2.5px solid transparent", color: mod === n.k ? th.text : th.textMut, padding: "16px 14px", fontSize: 13, fontWeight: mod === n.k ? 700 : 500, cursor: "pointer", transition: "all 0.25s", fontFamily: "'Plus Jakarta Sans',sans-serif", display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}
-              onMouseEnter={e => { if (mod !== n.k) e.currentTarget.style.color = th.text; }}
-              onMouseLeave={e => { if (mod !== n.k) e.currentTarget.style.color = th.textMut; }}>
-              <span style={{ fontSize: 13, opacity: mod === n.k ? 1 : 0.5 }}>{n.i}</span><span>{n.l}</span>
+            <button
+              key={n.k}
+              className="nav-btn"
+              onClick={() => { if (n.k === M.CONV && mod !== M.CONV) setMsgs([]); setMod(n.k); }}
+              aria-label={n.l}
+              aria-current={mod === n.k ? "page" : undefined}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: mod === n.k ? `2.5px solid ${th.accent}` : "2.5px solid transparent",
+                color: mod === n.k ? th.text : th.textMut,
+                padding: "16px 14px",
+                fontSize: 13,
+                fontWeight: mod === n.k ? 700 : 500,
+                cursor: "pointer",
+                fontFamily: "'Plus Jakarta Sans',sans-serif",
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span style={{ fontSize: 13, opacity: mod === n.k ? 1 : 0.5 }}>{n.i}</span>
+              <span className="nav-label">{n.l}</span>
             </button>
           ))}
         </div>
-        <button onClick={() => setDk(!dk)} aria-label="Toggle theme" style={{ width: 54, height: 30, borderRadius: 15, border: `1.5px solid ${th.border}`, cursor: "pointer", background: dk ? th.accentDim : th.bgAlt, position: "relative", transition: "all 0.35s", padding: 0, flexShrink: 0 }}>
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          aria-pressed={dk}
+          style={{ width: 54, height: 30, borderRadius: 15, border: `1.5px solid ${th.border}`, cursor: "pointer", background: dk ? th.accentDim : th.bgAlt, position: "relative", transition: "all 0.35s", padding: 0, flexShrink: 0 }}
+        >
           <div style={{ width: 24, height: 24, borderRadius: 12, background: th.accent, position: "absolute", top: 2, left: dk ? 27 : 2, transition: "left 0.35s cubic-bezier(0.22,1,0.36,1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, boxShadow: `0 1px 4px ${th.accent}44` }}>
             {dk ? "🌙" : "☀️"}
           </div>

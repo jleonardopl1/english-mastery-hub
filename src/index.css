@@ -1,12 +1,15 @@
 /* English Mastery Hub — Global Styles */
 /* Yamazing Corp Design System */
 
+/* ═══ RESET ═══ */
 *,
 *::before,
 *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.2) transparent;
 }
 
 html {
@@ -23,28 +26,164 @@ body {
 
 #root {
   min-height: 100vh;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ═══ SCROLLBAR (WebKit) ═══ */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.2);
+  background: var(--scrollbar-color, rgba(128, 128, 128, 0.2));
   border-radius: 3px;
 }
 
-/* Focus styles */
+/* ═══ FOCUS ═══ */
 :focus-visible {
-  outline: 2px solid #D4A017;
+  outline: 2px solid var(--accent, #D4A017);
   outline-offset: 2px;
 }
 
-/* Selection */
+/* ═══ SELECTION ═══ */
 ::selection {
-  background: rgba(212, 160, 23, 0.2);
+  background: var(--accent-dim, rgba(212, 160, 23, 0.2));
   color: inherit;
+}
+
+/* ═══ PLACEHOLDER ═══ */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted, #9E9A8F);
+}
+
+/* ═══ KEYFRAMES ═══ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ═══ INTERACTIVE COMPONENTS ═══ */
+
+/* Card hover (replaces JS onMouseEnter/onMouseLeave) */
+.card-hover {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.card-hover[data-clickable="true"]:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--accent-33) !important;
+}
+
+/* Button hover & active */
+.btn {
+  transition: all 0.25s ease;
+}
+.btn:not(:disabled):hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.btn:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Nav button */
+.nav-btn {
+  transition: all 0.25s ease;
+}
+.nav-btn:hover {
+  color: var(--text) !important;
+}
+
+/* Reveal button */
+.reveal-btn {
+  transition: all 0.3s ease;
+}
+.reveal-btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+
+/* Pill button */
+.pill-btn {
+  transition: all 0.25s ease;
+}
+.pill-btn:hover {
+  filter: brightness(1.05);
+}
+
+/* Input focus (replaces JS onFocus/onBlur) */
+.input-focus {
+  transition: border-color 0.3s ease;
+}
+.input-focus:focus {
+  border-color: var(--accent) !important;
+}
+
+/* ═══ RESPONSIVE — Tablet ═══ */
+@media (max-width: 768px) {
+  .hero {
+    padding: 32px 28px !important;
+  }
+  .hero h1 {
+    font-size: 32px !important;
+  }
+  .nav-container {
+    gap: 0 !important;
+  }
+  .nav-btn {
+    padding: 14px 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ═══ RESPONSIVE — Mobile ═══ */
+@media (max-width: 640px) {
+  main {
+    padding: 20px 16px 60px !important;
+  }
+  .hero {
+    padding: 28px 20px !important;
+    border-radius: 20px !important;
+  }
+  .hero h1 {
+    font-size: 28px !important;
+  }
+  .hero .subtitle {
+    font-size: 13px !important;
+  }
+  .nav-btn .nav-label {
+    display: none;
+  }
+  .nav-btn {
+    padding: 14px 12px !important;
+  }
+  .grid-cards {
+    grid-template-columns: 1fr !important;
+  }
+  .phrases-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .chat-bubble {
+    max-width: 88% !important;
+  }
+  .content-area {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+/* ═══ REDUCED MOTION ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
